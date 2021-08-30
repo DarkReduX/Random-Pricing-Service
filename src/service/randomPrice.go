@@ -23,8 +23,7 @@ func (s *RandomPrice) UpdatePriceLoop(prices map[string]data.SymbolPrice) error 
 		select {
 		case <-ticker.C:
 			for _, price := range prices {
-				priceBytes, err := json.Marshal(price)
-				ctx, _ := context.WithTimeout(context.Background(), time.Second*1)
+				ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
 
 				price.Uuid = time.Now().Unix()
 				price.Ask = float32(rand.Intn(10000-9000+9000)) + rand.Float32()
@@ -33,13 +32,24 @@ func (s *RandomPrice) UpdatePriceLoop(prices map[string]data.SymbolPrice) error 
 				if err != nil {
 					return err
 				}
-				price.Ask = float64(rand.Int()) + rand.Float64()
-				price.Bid = float64(rand.Intn((math.MaxInt32 - int(price.Ask)) + int(price.Ask)))
-				s.Repository.Client.RPush(ctx, queueKey, priceBytes)
+				err = s.Repository.Client.RPush(ctx, "queueKey", priceBytes).Err()
+				log.WithFields(log.Fields{
+					"symbol": price.Symbol,
+					"ask":    price.Ask,
+					"bid":    price.Bid,
+					"id":     price.Uuid,
+				}).Info("Push price")
+				if err != nil {
+					log.WithFields(log.Fields{
+						"error": err,
+					}).Error("Error while push in redis stream")
+				}
 			}
 		case <-quit:
 			ticker.Stop()
-
+			log.WithFields(log.Fields{
+				"service": "random_price",
+			}).Info("Stop service")
 			return nil
 		}
 	}
