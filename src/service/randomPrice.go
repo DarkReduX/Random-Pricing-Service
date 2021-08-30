@@ -54,3 +54,7 @@ func (s *RandomPrice) UpdatePriceLoop(prices map[string]data.SymbolPrice) error 
 		}
 	}
 }
+
+func NewRandomPrice(priceRepository *repository.PriceRepository) *RandomPrice {
+	return &RandomPrice{Repository: priceRepository}
+}
