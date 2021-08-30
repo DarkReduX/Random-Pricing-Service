@@ -1,23 +1,20 @@
 package service
 
-//https://ably.com/blog/event-streaming-with-redis-and-golang
 import (
 	"context"
 	"encoding/json"
+	log "github.com/sirupsen/logrus"
 	"main/src/internal/data"
-	"main/src/internal/data/repository"
-	"math"
+	"main/src/internal/repository"
 	"math/rand"
-	"os"
 	"time"
 )
 
 type RandomPrice struct {
-	Repository repository.PriceRepository
+	Repository *repository.PriceRepository
 }
 
 func (s *RandomPrice) UpdatePriceLoop(prices map[string]data.SymbolPrice) error {
-	queueKey := os.Getenv("REDIS_QUEUE_KEY")
 	ticker := time.NewTicker(time.Second * 10)
 
 	quit := make(chan struct{})
@@ -29,6 +26,10 @@ func (s *RandomPrice) UpdatePriceLoop(prices map[string]data.SymbolPrice) error 
 				priceBytes, err := json.Marshal(price)
 				ctx, _ := context.WithTimeout(context.Background(), time.Second*1)
 
+				price.Uuid = time.Now().Unix()
+				price.Ask = float32(rand.Intn(10000-9000+9000)) + rand.Float32()
+				price.Bid = float32(rand.Intn((int(price.Ask+10000) - int(price.Ask-5000)) + int(price.Ask-5000)))
+				priceBytes, err := json.Marshal(&price)
 				if err != nil {
 					return err
 				}
